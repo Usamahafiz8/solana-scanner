@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solana Token Scanner</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:          #08080f;
+      --surface:     #111119;
+      --card:        #16161f;
+      --card-border: #252535;
+      --purple:      #9945ff;
+      --green:       #14f195;
+      --red:         #f04560;
+      --yellow:      #f9c74f;
+      --text:        #e2e8f0;
+      --sub:         #7a8499;
+      --border:      rgba(255,255,255,0.05);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ─── HEADER ─────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo-mark {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--purple) 0%, var(--green) 100%);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 800; color: #fff;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+
+    .demo-chip {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 3px 8px;
+      background: rgba(153,69,255,.15);
+      color: var(--purple);
+      border: 1px solid rgba(153,69,255,.3);
+      border-radius: 20px;
+    }
+
+    /* ─── LAYOUT ─────────────────────────────────────────── */
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 36px 20px 60px;
+    }
+
+    /* ─── TABS ───────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 9px 12px;
+      border: none;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--sub);
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .18s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .tab .tab-icon { font-size: 15px; }
+
+    .tab.active {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+    }
+
+    .tab:not(.active):hover { color: var(--text); }
+
+    /* ─── SEARCH ─────────────────────────────────────────── */
+    .search-wrap {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      margin-bottom: 28px;
+    }
+
+    .input-group { flex: 1; }
+
+    .input-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .7px;
+      text-transform: uppercase;
+      color: var(--sub);
+      margin-bottom: 6px;
+    }
+
+    .addr-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 13.5px;
+      font-family: 'SFMono-Regular', 'Fira Code', Consolas, monospace;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color .18s;
+    }
+
+    .addr-input:focus { border-color: var(--purple); }
+    .addr-input::placeholder { color: var(--sub); font-family: inherit; }
+
+    .search-btn {
+      padding: 12px 26px;
+      background: var(--purple);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity .18s, transform .1s;
+      flex-shrink: 0;
+    }
+
+    .search-btn:hover  { opacity: .85; }
+    .search-btn:active { transform: scale(.97); }
+    .search-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ─── GENERIC CARD ───────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin-bottom: 14px;
+    }
+
+    .card-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .9px;
+      text-transform: uppercase;
+      color: var(--sub);
+      margin-bottom: 14px;
+    }
+
+    /* ─── GRID ───────────────────────────────────────────── */
+    .grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+    .grid2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+
+    @media (max-width: 600px) {
+      .grid3 { grid-template-columns: repeat(2,1fr); }
+      .grid2 { grid-template-columns: 1fr; }
+    }
+
+    /* ─── STAT PILL ──────────────────────────────────────── */
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 15px;
+    }
+
+    .stat-lbl { font-size: 11px; color: var(--sub); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+    .stat-val { font-size: 15px; font-weight: 600; }
+
+    /* ─── ROW ────────────────────────────────────────────── */
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13.5px;
+      gap: 12px;
+    }
+
+    .row:last-child { border-bottom: none; }
+    .row-key { color: var(--sub); flex-shrink: 0; }
+
+    .mono { font-family: 'SFMono-Regular', monospace; font-size: 12px; }
+    .good { color: var(--green); font-weight: 600; }
+    .bad  { color: var(--red);   font-weight: 600; }
+    .up   { color: var(--green); }
+    .down { color: var(--red);   }
+
+    /* ─── TOKEN HERO ─────────────────────────────────────── */
+    .token-hero {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .token-avatar {
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--purple), var(--green));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .token-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .token-hero-name  { font-size: 20px; font-weight: 700; line-height: 1.2; }
+    .token-hero-sub   { font-size: 13px; color: var(--sub); margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .token-hero-price { margin-left: auto; text-align: right; }
+    .big-price  { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+    .price-meta { font-size: 13px; margin-top: 3px; font-weight: 500; }
+
+    /* ─── RISK BADGE ─────────────────────────────────────── */
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 20px;
+      border-radius: 50px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .8px;
+    }
+
+    .risk-LOW    { background: rgba(20,241,149,.12); color: var(--green); border: 1px solid rgba(20,241,149,.3); }
+    .risk-MEDIUM { background: rgba(249,199, 79,.12); color: var(--yellow); border: 1px solid rgba(249,199,79,.3); }
+    .risk-HIGH   { background: rgba(240, 69, 96,.12); color: var(--red);    border: 1px solid rgba(240,69,96,.3); }
+    .risk-UNKNOWN{ background: rgba(122,132,153,.12); color: var(--sub);    border: 1px solid rgba(122,132,153,.3); }
+
+    .score-num { font-size: 38px; font-weight: 700; }
+
+    /* ─── WARNING ITEM ───────────────────────────────────── */
+    .warn-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .warn-item:last-child { border-bottom: none; }
+
+    .warn-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+
+    .dot-warn   { background: var(--yellow); }
+    .dot-danger { background: var(--red); }
+    .dot-info   { background: var(--purple); }
+
+    .warn-title { font-size: 13.5px; font-weight: 500; }
+    .warn-desc  { font-size: 12px; color: var(--sub); margin-top: 2px; }
+
+    /* ─── WALLET ─────────────────────────────────────────── */
+    .sol-hero  { font-size: 34px; font-weight: 700; display: flex; align-items: baseline; gap: 8px; }
+    .sol-unit  { font-size: 18px; font-weight: 500; color: var(--sub); }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      font-family: monospace;
+      font-size: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      color: var(--sub);
+    }
+
+    .token-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+    }
+
+    .token-row:last-child { border-bottom: none; }
+
+    .mini-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--purple), var(--green));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .mini-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .t-name { font-size: 13.5px; font-weight: 600; }
+    .t-mint { font-size: 11px; color: var(--sub); font-family: monospace; margin-top: 1px; }
+    .t-bal  { font-size: 13.5px; font-weight: 600; text-align: right; }
+    .t-val  { font-size: 11px; color: var(--sub); text-align: right; margin-top: 1px; }
+
+    .tx-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+
+    .tx-row:last-child { border-bottom: none; }
+
+    .tx-sig  { font-family: monospace; font-size: 12px; color: var(--purple); }
+    .tx-time { font-size: 11px; color: var(--sub); margin-top: 2px; }
+
+    .tx-type {
+      font-size: 11px;
+      padding: 3px 9px;
+      background: rgba(153,69,255,.14);
+      color: var(--purple);
+      border-radius: 20px;
+      margin-bottom: 4px;
+      display: inline-block;
+    }
+
+    .tx-ok   { font-size: 11px; font-weight: 700; color: var(--green); }
+    .tx-fail { font-size: 11px; font-weight: 700; color: var(--red); }
+
+    /* ─── STATES ─────────────────────────────────────────── */
+    .spinner {
+      width: 34px; height: 34px;
+      border: 3px solid var(--card-border);
+      border-top-color: var(--purple);
+      border-radius: 50%;
+      animation: spin .65s linear infinite;
+      margin: 70px auto;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty {
+      text-align: center;
+      padding: 70px 20px;
+      color: var(--sub);
+    }
+
+    .empty-icon  { font-size: 44px; margin-bottom: 10px; }
+    .empty-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+    .empty-hint  { font-size: 13px; }
+
+    .err-box {
+      background: rgba(240,69,96,.09);
+      border: 1px solid rgba(240,69,96,.25);
+      color: var(--red);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 14px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .count-badge {
+      font-size: 11px;
+      padding: 3px 9px;
+      background: var(--surface);
+      color: var(--sub);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    /* ─── API REFERENCE ──────────────────────────────────── */
+    .api-section {
+      margin-top: 48px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+    }
+
+    .api-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--sub);
+      margin-bottom: 14px;
+    }
+
+    .endpoint-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .endpoint-card:hover { border-color: rgba(153,69,255,.4); }
+
+    .ep-left { flex: 1; min-width: 0; }
+
+    .ep-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+
+    .method-badge {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .6px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: rgba(20,241,149,.15);
+      color: var(--green);
+      border: 1px solid rgba(20,241,149,.3);
+      flex-shrink: 0;
+    }
+
+    .ep-route {
+      font-family: 'SFMono-Regular', 'Fira Code', Consolas, monospace;
+      font-size: 13px;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .ep-route .param { color: var(--purple); }
+
+    .ep-desc { font-size: 12.5px; color: var(--sub); line-height: 1.5; }
+
+    .ep-sources {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .source-chip {
+      font-size: 10.5px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid var(--card-border);
+      color: var(--sub);
+      background: var(--surface);
+    }
+
+    .try-btn {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--surface);
+      color: var(--sub);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s;
+      flex-shrink: 0;
+    }
+
+    .try-btn:hover { border-color: var(--purple); color: var(--purple); }
+
+    .copy-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 30px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      z-index: 99;
+    }
+
+    .copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">◎</div>
+  <h1>Solana Token Scanner</h1>
+  <span class="demo-chip">DEMO</span>
+  <a href="/swagger.html" target="_blank" style="margin-left:auto;font-size:12px;font-weight:600;padding:6px 14px;border:1px solid var(--card-border);border-radius:8px;color:var(--sub);text-decoration:none;transition:all .15s;" onmouseover="this.style.borderColor='#9945ff';this.style.color='#9945ff'" onmouseout="this.style.borderColor='var(--card-border)';this.style.color='var(--sub)'">
+    API Docs ↗
+  </a>
+</header>
+
+<div class="page">
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="stats">
+      <span class="tab-icon">📊</span> Token Stats
+    </button>
+    <button class="tab" data-tab="risk">
+      <span class="tab-icon">🛡️</span> Risk Score
+    </button>
+    <button class="tab" data-tab="wallet">
+      <span class="tab-icon">👛</span> Wallet Scanner
+    </button>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-wrap">
+    <div class="input-group">
+      <label id="lbl">Token Address</label>
+      <input id="addr" class="addr-input" type="text"
+        placeholder="Enter Solana token address…"
+        autocomplete="off" spellcheck="false"
+        onkeydown="if(event.key==='Enter') go()" />
+    </div>
+    <button class="search-btn" id="btn" onclick="go()">Search</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="out">
+    <div class="empty">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">Enter an address above</div>
+      <div class="empty-hint">Try BONK: DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let tab = 'stats';
+
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(el => {
+    el.addEventListener('click', () => {
+      tab = el.dataset.tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === el));
+      document.getElementById('addr').value = '';
+      document.getElementById('out').innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">${tab === 'wallet' ? '👛' : tab === 'risk' ? '🛡️' : '📊'}</div>
+          <div class="empty-title">${tab === 'wallet' ? 'Enter a wallet address' : 'Enter a token address'}</div>
+          <div class="empty-hint">${tab !== 'wallet' ? 'Try BONK: DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263' : ''}</div>
+        </div>`;
+      document.getElementById('lbl').textContent = tab === 'wallet' ? 'Wallet Address' : 'Token Address';
+      document.getElementById('addr').placeholder = tab === 'wallet'
+        ? 'Enter Solana wallet address…'
+        : 'Enter Solana token address…';
+    });
+  });
+
+  async function go() {
+    const addr = document.getElementById('addr').value.trim();
+    if (!addr) return;
+    const btn = document.getElementById('btn');
+    btn.disabled = true; btn.textContent = 'Loading…';
+    document.getElementById('out').innerHTML = '<div class="spinner"></div>';
+
+    try {
+      const url = tab === 'stats'  ? `/api/token/${addr}/stats`
+                : tab === 'risk'   ? `/api/token/${addr}/risk`
+                :                    `/api/wallet/${addr}`;
+      const r = await fetch(url);
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error || 'Request failed');
+      if (tab === 'stats')  renderStats(j.data);
+      else if (tab === 'risk')   renderRisk(j.data);
+      else                       renderWallet(j.data);
+    } catch (e) {
+      document.getElementById('out').innerHTML =
+        `<div class="err-box">⚠️ ${e.message}</div>`;
+    }
+    btn.disabled = false; btn.textContent = 'Search';
+  }
+
+  /* ── Formatters ── */
+  const $ = v => {
+    if (v === null || v === undefined) return '—';
+    const n = parseFloat(v); if (isNaN(n)) return '—';
+    if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return '$' + (n/1e3).toFixed(2) + 'K';
+    return '$' + n.toFixed(2);
+  };
+
+  const price = v => {
+    if (!v) return '—';
+    const n = parseFloat(v);
+    if (n < 0.000001) return '$' + n.toExponential(4);
+    if (n < 0.01) return '$' + n.toFixed(8);
+    if (n < 1)    return '$' + n.toFixed(6);
+    return '$' + n.toFixed(2);
+  };
+
+  const short = a => a ? a.slice(0,5) + '…' + a.slice(-4) : '—';
+
+  const pct = (v, colored = true) => {
+    if (v === null || v === undefined) return '—';
+    const n = parseFloat(v);
+    const s = (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+    return colored ? `<span class="${n >= 0 ? 'up' : 'down'}">${s}</span>` : s;
+  };
+
+  const dt = ts => ts ? new Date(ts * 1000).toLocaleString(undefined, { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+
+  /* ── Token Stats ── */
+  function renderStats(d) {
+    const logo = d.info?.logoUrl
+      ? `<img src="${d.info.logoUrl}" alt="" onerror="this.parentElement.textContent='${(d.symbol||'?')[0]}'">`
+      : (d.symbol || '?')[0];
+
+    document.getElementById('out').innerHTML = `
+
+      <div class="card">
+        <div class="token-hero">
+          <div class="token-avatar">${logo}</div>
+          <div>
+            <div class="token-hero-name">${d.tokenName || '—'}</div>
+            <div class="token-hero-sub">
+              <strong>${d.symbol || '—'}</strong>
+              <span class="pill">${short(d.contractAddress)}</span>
+              <span style="color:var(--sub)">${d.chainId || ''} · ${d.dexId || ''}</span>
+            </div>
+          </div>
+          <div class="token-hero-price">
+            <div class="big-price">${price(d.currentPriceUSD)}</div>
+            <div class="price-meta">${pct(d.priceChange?.h24)} 24h</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Market Overview</div>
+        <div class="grid3">
+          <div class="stat"><div class="stat-lbl">Market Cap</div><div class="stat-val">${$(d.marketCap)}</div></div>
+          <div class="stat"><div class="stat-lbl">FDV</div><div class="stat-val">${$(d.fdv)}</div></div>
+          <div class="stat"><div class="stat-lbl">Liquidity USD</div><div class="stat-val">${$(d.liquidity?.usd)}</div></div>
+          <div class="stat"><div class="stat-lbl">Volume 24h</div><div class="stat-val">${$(d.volume?.h24)}</div></div>
+          <div class="stat"><div class="stat-lbl">Volume 6h</div><div class="stat-val">${$(d.volume?.h6)}</div></div>
+          <div class="stat"><div class="stat-lbl">Volume 1h</div><div class="stat-val">${$(d.volume?.h1)}</div></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card-label">Price Change</div>
+          <div class="row"><span class="row-key">5 min</span>${pct(d.priceChange?.m5)}</div>
+          <div class="row"><span class="row-key">1 hour</span>${pct(d.priceChange?.h1)}</div>
+          <div class="row"><span class="row-key">6 hours</span>${pct(d.priceChange?.h6)}</div>
+          <div class="row"><span class="row-key">24 hours</span>${pct(d.priceChange?.h24)}</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Transactions (24h)</div>
+          <div class="row"><span class="row-key">Buys</span><span class="good">${d.transactions?.h24?.buys ?? '—'}</span></div>
+          <div class="row"><span class="row-key">Sells</span><span class="bad">${d.transactions?.h24?.sells ?? '—'}</span></div>
+          <div class="row"><span class="row-key">Pair Age</span><span>${d.pairAgeHours != null ? Math.floor(d.pairAgeHours/24)+'d '+Math.floor(d.pairAgeHours%24)+'h' : '—'}</span></div>
+          <div class="row"><span class="row-key">Total Pairs</span><span>${d.totalPairsFound ?? '—'}</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Pair Details</div>
+        <div class="row"><span class="row-key">Pair Address</span><span class="mono">${short(d.pairAddress)}</span></div>
+        <div class="row"><span class="row-key">Quote Token</span><span>${d.quoteToken?.symbol || '—'}</span></div>
+        <div class="row"><span class="row-key">Contract</span><span class="mono">${short(d.contractAddress)}</span></div>
+        ${d.info?.websites?.[0] ? `<div class="row"><span class="row-key">Website</span><a href="${d.info.websites[0].url}" target="_blank" style="color:var(--purple);font-size:13px;">${d.info.websites[0].url}</a></div>` : ''}
+      </div>
+    `;
+  }
+
+  /* ── Risk Score ── */
+  function renderRisk(d) {
+    const lvl = d.riskLevel || 'UNKNOWN';
+    const s   = d.summary  || {};
+
+    const warnings = (s.warnings || []).map(w => `
+      <div class="warn-item">
+        <div class="warn-dot ${w.level === 'danger' ? 'dot-danger' : w.level === 'warn' ? 'dot-warn' : 'dot-info'}"></div>
+        <div>
+          <div class="warn-title">${w.name}</div>
+          <div class="warn-desc">${w.description}</div>
+        </div>
+      </div>`).join('') || '<div style="color:var(--sub);font-size:13px;padding:6px 0;">No warnings detected ✅</div>';
+
+    const holders = (s.topHolders || []).map(h => `
+      <div class="row">
+        <span class="row-key mono">${short(h.address)}${h.insider ? ' <span style="color:var(--yellow)">insider</span>' : ''}</span>
+        <span class="${parseFloat(h.pct) > 10 ? 'bad' : ''}">${parseFloat(h.pct || 0).toFixed(2)}%</span>
+      </div>`).join('') || '<div style="color:var(--sub);font-size:13px;padding:6px 0;">No holder data</div>';
+
+    const markets = (s.markets || []).map(m => `
+      <div class="row">
+        <span class="row-key">${m.marketType || 'Pool'}</span>
+        <span>${m.lpLocked != null ? m.lpLocked+'% locked' : '—'}${m.lpLockedUSD ? ` · $${Math.round(m.lpLockedUSD).toLocaleString()}` : ''}</span>
+      </div>`).join('');
+
+    document.getElementById('out').innerHTML = `
+
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div class="card-label" style="margin-bottom:10px;">Risk Assessment</div>
+          <div class="risk-badge risk-${lvl}">
+            ${ lvl === 'LOW' ? '✅' : lvl === 'HIGH' ? '🚨' : lvl === 'MEDIUM' ? '⚠️' : '❓' }
+            ${lvl} RISK
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div class="card-label">Risk Score</div>
+          <div class="score-num" style="color:${lvl === 'LOW' ? 'var(--green)' : lvl === 'HIGH' ? 'var(--red)' : 'var(--yellow)'}">
+            ${d.overallRiskScore ?? '—'}
+          </div>
+          <div style="font-size:11px;color:var(--sub);margin-top:2px;">out of 1000</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card-label">Security Flags</div>
+          <div class="row"><span class="row-key">Mint Authority</span><span class="${s.mintAuthority == null ? 'good' : 'bad'}">${s.mintAuthority == null ? '✓ Revoked' : '✗ Active'}</span></div>
+          <div class="row"><span class="row-key">Freeze Authority</span><span class="${s.freezeAuthority == null ? 'good' : 'bad'}">${s.freezeAuthority == null ? '✓ Revoked' : '✗ Active'}</span></div>
+          <div class="row"><span class="row-key">Metadata</span><span class="${s.metadataMutable === true ? 'bad' : s.metadataMutable === false ? 'good' : ''}">${s.metadataMutable === true ? '✗ Mutable' : s.metadataMutable === false ? '✓ Immutable' : '—'}</span></div>
+          <div class="row"><span class="row-key">Rugged</span><span class="${s.rugged ? 'bad' : 'good'}">${s.rugged ? '✗ Yes' : '✓ No'}</span></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Token Info</div>
+          <div class="row"><span class="row-key">Name</span><span>${s.metadataName || '—'}</span></div>
+          <div class="row"><span class="row-key">Symbol</span><span>${s.metadataSymbol || '—'}</span></div>
+          <div class="row"><span class="row-key">Top 5 Holders</span><span class="${parseFloat(s.top5HolderPct||0) > 30 ? 'bad' : ''}">${s.top5HolderPct != null ? s.top5HolderPct+'%' : '—'}</span></div>
+          <div class="row"><span class="row-key">LP Providers</span><span>${s.totalLPProviders ?? '—'}</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Risk Warnings</div>
+        ${warnings}
+      </div>
+
+      <div class="card">
+        <div class="card-label">Top Holders</div>
+        ${holders}
+      </div>
+
+      ${markets ? `<div class="card"><div class="card-label">Liquidity Pools</div>${markets}</div>` : ''}
+    `;
+  }
+
+  /* ── Wallet ── */
+  function renderWallet(d) {
+    const tokens = d.tokenBalances || [];
+    const txs    = d.recentTransactions || [];
+
+    const tokenList = tokens.length ? tokens.map(t => `
+      <div class="token-row">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="mini-avatar">
+            ${t.logoURI ? `<img src="${t.logoURI}" alt="" onerror="this.parentElement.textContent='${(t.symbol||'?')[0]}'">` : (t.symbol||'?')[0]}
+          </div>
+          <div>
+            <div class="t-name">${t.symbol || 'Unknown'}${t.name && t.name !== t.symbol ? `<span style="color:var(--sub);font-weight:400;"> · ${t.name}</span>` : ''}</div>
+            <div class="t-mint">${short(t.mint)}</div>
+          </div>
+        </div>
+        <div>
+          <div class="t-bal">${parseFloat(t.balance||0).toLocaleString(undefined,{maximumFractionDigits:4})}</div>
+          ${t.valueUSD ? `<div class="t-val">${$(t.valueUSD)}</div>` : ''}
+        </div>
+      </div>`).join('')
+      : '<div style="color:var(--sub);font-size:13px;padding:8px 0;">No token holdings found</div>';
+
+    const txList = txs.length ? txs.map(tx => `
+      <div class="tx-row">
+        <div>
+          <div class="tx-sig">${short(tx.signature)}</div>
+          <div class="tx-time">${dt(tx.blockTime || tx.timestamp)}</div>
+        </div>
+        <div style="text-align:right;">
+          ${tx.type ? `<div class="tx-type">${tx.type}</div>` : ''}
+          <div class="${tx.status === 'success' ? 'tx-ok' : 'tx-fail'}">${tx.status === 'success' ? '✓ SUCCESS' : '✗ FAILED'}</div>
+        </div>
+      </div>`).join('')
+      : '<div style="color:var(--sub);font-size:13px;padding:8px 0;">No transactions found</div>';
+
+    document.getElementById('out').innerHTML = `
+
+      <div class="card">
+        <div class="card-label">SOL Balance</div>
+        <div class="sol-hero">
+          ${d.solBalance != null ? parseFloat(d.solBalance).toFixed(4) : '—'}
+          <span class="sol-unit">SOL</span>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span class="pill">${short(d.walletAddress)}</span>
+          <span style="font-size:12px;color:var(--sub);">${tokens.length} tokens · ${txs.length} recent txs</span>
+        </div>
+        ${d.dataSource ? `<div style="margin-top:8px;font-size:11px;color:var(--sub);">Source: ${d.dataSource}</div>` : ''}
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div class="card-label" style="margin-bottom:0;">Token Holdings</div>
+          <span class="count-badge">${tokens.length} tokens</span>
+        </div>
+        ${tokenList}
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div class="card-label" style="margin-bottom:0;">Recent Transactions</div>
+          <span class="count-badge">${txs.length} shown</span>
+        </div>
+        ${txList}
+      </div>
+
+      ${d.errors?.length ? `
+        <div class="card" style="border-color:rgba(240,69,96,.2);">
+          <div class="card-label" style="color:var(--red);">Partial Errors</div>
+          ${d.errors.map(e => `<div style="font-size:13px;color:var(--sub);padding:3px 0;">• ${e}</div>`).join('')}
+        </div>` : ''}
+    `;
+  }
+</script>
+</body>
+</html>

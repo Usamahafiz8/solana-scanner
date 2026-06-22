@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solana Token Scanner — API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
+  <style>
+    body { margin: 0; background: #fff; }
+
+    .topbar { display: none !important; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      color: #333;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      margin: 16px 20px;
+      transition: border-color .15s, color .15s;
+    }
+
+    .back-btn:hover { border-color: #9945ff; color: #9945ff; }
+  </style>
+</head>
+<body>
+  <a class="back-btn" href="/">← Back to Scanner</a>
+  <div id="swagger-ui"></div>
+
+  <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+  <script>
+    const spec = {
+      openapi: "3.0.0",
+      info: {
+        title: "Solana Token Scanner API",
+        version: "1.0.0",
+        description: "Demo API to fetch Solana token stats, risk scores, and wallet data."
+      },
+      servers: [{ url: "" }],
+      tags: [
+        { name: "Token",  description: "Token stats and risk analysis" },
+        { name: "Wallet", description: "Wallet holdings and transactions" }
+      ],
+      paths: {
+        "/api/token/{tokenAddress}/stats": {
+          get: {
+            tags: ["Token"],
+            summary: "Token Stats",
+            description: "Fetches live price, market cap, liquidity, volume, buys/sells, pair info and more from **DexScreener**.",
+            parameters: [{
+              name: "tokenAddress",
+              in: "path",
+              required: true,
+              description: "Solana token mint address",
+              schema: { type: "string", example: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263" }
+            }],
+            responses: {
+              200: {
+                description: "Success",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      properties: {
+                        success: { type: "boolean", example: true },
+                        data: {
+                          type: "object",
+                          properties: {
+                            tokenName:       { type: "string",  example: "Bonk" },
+                            symbol:          { type: "string",  example: "Bonk" },
+                            contractAddress: { type: "string",  example: "DezXAZ8z..." },
+                            currentPriceUSD: { type: "string",  example: "0.000004678" },
+                            marketCap:       { type: "number",  example: 411724828 },
+                            fdv:             { type: "number",  example: 415785607 },
+                            liquidity: {
+                              type: "object",
+                              properties: {
+                                usd:   { type: "number", example: 652649 },
+                                base:  { type: "number" },
+                                quote: { type: "number" }
+                              }
+                            },
+                            volume: {
+                              type: "object",
+                              properties: {
+                                h24: { type: "number" },
+                                h6:  { type: "number" },
+                                h1:  { type: "number" },
+                                m5:  { type: "number" }
+                              }
+                            },
+                            priceChange: {
+                              type: "object",
+                              properties: {
+                                h24: { type: "number", example: 1.65 },
+                                h6:  { type: "number" },
+                                h1:  { type: "number" },
+                                m5:  { type: "number" }
+                              }
+                            },
+                            transactions: {
+                              type: "object",
+                              properties: {
+                                h24: {
+                                  type: "object",
+                                  properties: {
+                                    buys:  { type: "number", example: 42 },
+                                    sells: { type: "number", example: 28 }
+                                  }
+                                }
+                              }
+                            },
+                            pairAgeHours:    { type: "number",  example: 21089 },
+                            chainId:         { type: "string",  example: "solana" },
+                            dexId:           { type: "string",  example: "meteora" },
+                            pairAddress:     { type: "string" },
+                            totalPairsFound: { type: "number",  example: 12 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              500: {
+                description: "Error",
+                content: {
+                  "application/json": {
+                    schema: { $ref: "#/components/schemas/Error" }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        "/api/token/{tokenAddress}/risk": {
+          get: {
+            tags: ["Token"],
+            summary: "Risk Score",
+            description: "Aggregates risk data from **RugCheck** and **Solana Tracker**. Returns mint authority, freeze authority, metadata mutability, top holder concentration, liquidity lock status, and warnings.",
+            parameters: [{
+              name: "tokenAddress",
+              in: "path",
+              required: true,
+              description: "Solana token mint address",
+              schema: { type: "string", example: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263" }
+            }],
+            responses: {
+              200: {
+                description: "Success",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      properties: {
+                        success: { type: "boolean", example: true },
+                        data: {
+                          type: "object",
+                          properties: {
+                            mint:             { type: "string" },
+                            overallRiskScore: { type: "number",  example: 101 },
+                            riskLevel: {
+                              type: "string",
+                              enum: ["LOW", "MEDIUM", "HIGH", "UNKNOWN"],
+                              example: "LOW"
+                            },
+                            summary: {
+                              type: "object",
+                              properties: {
+                                score:           { type: "number",  example: 101 },
+                                rugged:          { type: "boolean", example: false },
+                                mintAuthority:   { type: "string",  nullable: true, example: null },
+                                freezeAuthority: { type: "string",  nullable: true, example: null },
+                                metadataMutable: { type: "boolean", nullable: true, example: true },
+                                metadataName:    { type: "string",  example: "Bonk" },
+                                metadataSymbol:  { type: "string",  example: "Bonk" },
+                                top5HolderPct:   { type: "string",  example: "12.50" },
+                                totalLPProviders:{ type: "number" },
+                                warnings: {
+                                  type: "array",
+                                  items: {
+                                    type: "object",
+                                    properties: {
+                                      name:        { type: "string", example: "Mutable metadata" },
+                                      description: { type: "string" },
+                                      level:       { type: "string", example: "warn" },
+                                      score:       { type: "number", example: 100 }
+                                    }
+                                  }
+                                },
+                                topHolders: {
+                                  type: "array",
+                                  items: {
+                                    type: "object",
+                                    properties: {
+                                      address: { type: "string" },
+                                      pct:     { type: "number" },
+                                      insider: { type: "boolean" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              500: {
+                description: "Error",
+                content: {
+                  "application/json": {
+                    schema: { $ref: "#/components/schemas/Error" }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        "/api/wallet/{walletAddress}": {
+          get: {
+            tags: ["Wallet"],
+            summary: "Wallet Scanner",
+            description: "Returns SOL balance, all SPL token holdings (with names/symbols/logos via Helius), and recent transaction history.",
+            parameters: [{
+              name: "walletAddress",
+              in: "path",
+              required: true,
+              description: "Solana wallet public key",
+              schema: { type: "string", example: "3h1zGmCwsRJnVk5BuRNMLsPaQu1y2aqXqXDWYCgrp5UG" }
+            }],
+            responses: {
+              200: {
+                description: "Success",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      properties: {
+                        success: { type: "boolean", example: true },
+                        data: {
+                          type: "object",
+                          properties: {
+                            walletAddress: { type: "string" },
+                            dataSource:    { type: "string", example: "Helius" },
+                            solBalance:    { type: "number", example: 1.5042 },
+                            tokenCount:    { type: "number", example: 8 },
+                            tokenBalances: {
+                              type: "array",
+                              items: {
+                                type: "object",
+                                properties: {
+                                  mint:     { type: "string" },
+                                  symbol:   { type: "string", example: "BONK" },
+                                  name:     { type: "string", example: "Bonk" },
+                                  balance:  { type: "number", example: 1000000 },
+                                  decimals: { type: "number", example: 5 },
+                                  logoURI:  { type: "string", nullable: true },
+                                  valueUSD: { type: "number", nullable: true }
+                                }
+                              }
+                            },
+                            recentTransactions: {
+                              type: "array",
+                              items: {
+                                type: "object",
+                                properties: {
+                                  signature:  { type: "string" },
+                                  timestamp:  { type: "number" },
+                                  type:       { type: "string", example: "SWAP" },
+                                  status:     { type: "string", example: "success" },
+                                  fee:        { type: "number" },
+                                  description:{ type: "string", nullable: true }
+                                }
+                              }
+                            },
+                            transactionCount: { type: "number", example: 20 },
+                            errors: { type: "array", items: { type: "string" } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              500: {
+                description: "Error",
+                content: {
+                  "application/json": {
+                    schema: { $ref: "#/components/schemas/Error" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+
+      components: {
+        schemas: {
+          Error: {
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: false },
+              error:   { type: "string",  example: "No pairs found for this token address" }
+            }
+          }
+        }
+      }
+    };
+
+    SwaggerUIBundle({
+      spec,
+      dom_id: '#swagger-ui',
+      deepLinking: true,
+      presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+      layout: 'BaseLayout',
+      tryItOutEnabled: true,
+      supportedSubmitMethods: ['get'],
+      defaultModelsExpandDepth: 0,
+      defaultModelExpandDepth: 2,
+    });
+  </script>
+</body>
+</html>
